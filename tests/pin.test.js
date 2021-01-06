@@ -2,11 +2,12 @@ require("@testing-library/jest-dom");
 const axios = require("axios");
 const MockAdapter = require("axios-mock-adapter");
 const pin = require("../api/pin");
-const renderRepoCard = require("../src/renderRepoCard");
-const { renderError } = require("../src/utils");
+const renderRepoCard = require("../src/cards/repo-card");
+const { renderError } = require("../src/common/utils");
 
 const data_repo = {
   repository: {
+    username: "anuraghazra",
     name: "convoychat",
     stargazers: { totalCount: 38000 },
     description: "Help us take over the world! React + TS + GraphQL Chat App",
@@ -16,6 +17,7 @@ const data_repo = {
       name: "TypeScript",
     },
     forkCount: 100,
+    isTemplate: false,
   },
 };
 
@@ -61,6 +63,7 @@ describe("Test /api/pin", () => {
         icon_color: "fff",
         text_color: "fff",
         bg_color: "fff",
+        full_name: "1",
       },
     };
     const res = {
@@ -73,7 +76,7 @@ describe("Test /api/pin", () => {
 
     expect(res.setHeader).toBeCalledWith("Content-Type", "image/svg+xml");
     expect(res.send).toBeCalledWith(
-      renderRepoCard(data_repo.repository, { ...req.query })
+      renderRepoCard(data_repo.repository, { ...req.query }),
     );
   });
 
@@ -117,7 +120,7 @@ describe("Test /api/pin", () => {
 
     expect(res.setHeader).toBeCalledWith("Content-Type", "image/svg+xml");
     expect(res.send).toBeCalledWith(
-      renderError("Organization Repository Not found")
+      renderError("Organization Repository Not found"),
     );
   });
 });

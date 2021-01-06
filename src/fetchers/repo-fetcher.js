@@ -1,14 +1,16 @@
-const { request } = require("./utils");
+const { request } = require("../common/utils");
+const retryer = require("../common/retryer");
 
-async function fetchRepo(username, reponame) {
-  if (!username || !reponame) {
-    throw new Error("Invalid username or reponame");
-  }
-
-  const res = await request({
-    query: `
+const fetcher = (variables, token) => {
+  return request(
+    {
+      query: `
       fragment RepoInfo on Repository {
         name
+        nameWithOwner
+        isPrivate
+        isArchived
+        isTemplate
         stargazers {
           totalCount
         }
@@ -33,11 +35,20 @@ async function fetchRepo(username, reponame) {
         }
       }
     `,
-    variables: {
-      login: username,
-      repo: reponame,
+      variables,
     },
-  });
+    {
+      Authorization: `bearer ${token}`,
+    },
+  );
+};
+
+async function fetchRepo(username, reponame) {
+  if (!username || !reponame) {
+    throw new Error("Invalid username or reponame");
+  }
+
+  let res = await retryer(fetcher, { login: username, repo: reponame });
 
   const data = res.data.data;
 
@@ -45,15 +56,21 @@ async function fetchRepo(username, reponame) {
     throw new Error("Not found");
   }
 
-  if (data.organization === null && data.user) {
-    if (!data.user.repository) {
+  const isUser = data.organization === null && data.user;
+  const isOrg = data.user === null && data.organization;
+
+  if (isUser) {
+    if (!data.user.repository || data.user.repository.isPrivate) {
       throw new Error("User Repository Not found");
     }
     return data.user.repository;
   }
 
-  if (data.user === null && data.organization) {
-    if (!data.organization.repository) {
+  if (isOrg) {
+    if (
+      !data.organization.repository ||
+      data.organization.repository.isPrivate
+    ) {
       throw new Error("Organization Repository Not found");
     }
     return data.organization.repository;
